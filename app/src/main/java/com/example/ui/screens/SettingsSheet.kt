@@ -66,6 +66,10 @@ fun SettingsSheet(
   onToggleCameraFacing: () -> Unit,
   onSetAspectRatio: (String) -> Unit,
   onOpenVideoSettings: () -> Unit = {},
+  onToggleCompactMode: (Boolean) -> Unit = {},
+  onSetThemeMode: (String) -> Unit = {},
+  onSetShutterSound: (String) -> Unit = {},
+  onSetDateStampFormat: (String) -> Unit = {},
   modifier: Modifier = Modifier
 ) {
   val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -152,6 +156,168 @@ fun SettingsSheet(
         checked = settings.dateStampEnabled,
         onCheckedChange = { onToggleDateStamp(it) }
       )
+
+      Spacer(modifier = Modifier.height(16.dp))
+
+      // 3b. Compact Layout Mode
+      SettingToggleRow(
+        title = "Compact Screen Layout",
+        description = "Auto-fit UI controls for smaller phone displays",
+        checked = settings.isCompactMode,
+        onCheckedChange = { onToggleCompactMode(it) }
+      )
+
+      Spacer(modifier = Modifier.height(22.dp))
+
+      // Date Stamp Style Selector
+      if (settings.dateStampEnabled) {
+        Text(
+          text = "Date Timestamp Style",
+          color = CozyCream,
+          fontSize = 14.sp,
+          fontWeight = FontWeight.SemiBold
+        )
+        Text(
+          text = "Choose retro font & color format",
+          color = CozyMutedText,
+          fontSize = 12.sp
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+          listOf(
+            "Classic Orange Digital" to "Classic Amber",
+            "Red LED Digital" to "Red LED",
+            "Yellow Retro Stamp" to "Yellow Stamp",
+            "White Typewriter" to "Typewriter"
+          ).forEach { (styleKey, label) ->
+            val isSelected = settings.dateStampFormat == styleKey
+            Box(
+              modifier = Modifier
+                .weight(1f)
+                .clip(RoundedCornerShape(12.dp))
+                .background(if (isSelected) CozyAmberGold else CozyCharcoalSurface)
+                .border(
+                  width = 1.dp,
+                  color = if (isSelected) CozyAmberGold else CozyBorder.copy(alpha = 0.5f),
+                  shape = RoundedCornerShape(12.dp)
+                )
+                .clickable { onSetDateStampFormat(styleKey) }
+                .padding(vertical = 10.dp),
+              contentAlignment = Alignment.Center
+            ) {
+              Text(
+                text = label,
+                color = if (isSelected) CozyObsidian else CozyCream,
+                fontSize = 11.sp,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+              )
+            }
+          }
+        }
+        Spacer(modifier = Modifier.height(22.dp))
+      }
+
+      // Camera Shutter Audio Selector
+      Text(
+        text = "Camera Shutter Sound",
+        color = CozyCream,
+        fontSize = 14.sp,
+        fontWeight = FontWeight.SemiBold
+      )
+      Text(
+        text = "Authentic mechanical click audio effects",
+        color = CozyMutedText,
+        fontSize = 12.sp
+      )
+      Spacer(modifier = Modifier.height(10.dp))
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+      ) {
+        listOf(
+          "Classic Mechanical SLR" to "SLR Click",
+          "Retro Film Advance" to "Film Advance",
+          "Twin-Lens Snap" to "TLR Snap",
+          "Digital Beep" to "Beep",
+          "Mute" to "Mute"
+        ).forEach { (soundKey, label) ->
+          val isSelected = settings.shutterSound == soundKey
+          Box(
+            modifier = Modifier
+              .weight(1f)
+              .clip(RoundedCornerShape(12.dp))
+              .background(if (isSelected) CozyCream else CozyCharcoalSurface)
+              .border(
+                width = 1.dp,
+                color = if (isSelected) CozyCream else CozyBorder.copy(alpha = 0.5f),
+                shape = RoundedCornerShape(12.dp)
+              )
+              .clickable { onSetShutterSound(soundKey) }
+              .padding(vertical = 10.dp),
+            contentAlignment = Alignment.Center
+          ) {
+            Text(
+              text = label,
+              color = if (isSelected) CozyObsidian else CozyCream,
+              fontSize = 11.sp,
+              fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+            )
+          }
+        }
+      }
+
+      Spacer(modifier = Modifier.height(22.dp))
+
+      // App UI Theme Selector
+      Text(
+        text = "UI Visual Theme",
+        color = CozyCream,
+        fontSize = 14.sp,
+        fontWeight = FontWeight.SemiBold
+      )
+      Text(
+        text = "Dark / Light and custom aesthetic color schemes",
+        color = CozyMutedText,
+        fontSize = 12.sp
+      )
+      Spacer(modifier = Modifier.height(10.dp))
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+      ) {
+        listOf(
+          "Dark Obsidian" to "Dark Obsidian",
+          "Vintage Cream Light" to "Cream Light",
+          "Film Noir Dark" to "Film Noir",
+          "Warm Amber" to "Warm Amber"
+        ).forEach { (themeKey, label) ->
+          val isSelected = settings.themeMode == themeKey
+          Box(
+            modifier = Modifier
+              .weight(1f)
+              .clip(RoundedCornerShape(12.dp))
+              .background(if (isSelected) CozyAmberGold else CozyCharcoalSurface)
+              .border(
+                width = 1.dp,
+                color = if (isSelected) CozyAmberGold else CozyBorder.copy(alpha = 0.5f),
+                shape = RoundedCornerShape(12.dp)
+              )
+              .clickable { onSetThemeMode(themeKey) }
+              .padding(vertical = 10.dp),
+            contentAlignment = Alignment.Center
+          ) {
+            Text(
+              text = label,
+              color = if (isSelected) CozyObsidian else CozyCream,
+              fontSize = 11.sp,
+              fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+            )
+          }
+        }
+      }
 
       Spacer(modifier = Modifier.height(22.dp))
 

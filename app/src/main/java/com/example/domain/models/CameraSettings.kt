@@ -19,5 +19,9 @@ data class CameraSettings(
   val videoFps: Int = 30,                 // 24, 30, 60
   val videoAudioEnabled: Boolean = true,
   val videoBitratePreset: String = "High",// "High", "Standard", "Vintage"
-  val activeSampleScene: String = "sunset" // "sunset", "cafe", "coastal"
+  val activeSampleScene: String = "sunset", // "sunset", "cafe", "coastal"
+  val isCompactMode: Boolean = false,
+  val themeMode: String = "Dark Obsidian", // "Dark Obsidian", "Vintage Cream Light", "Film Noir Dark", "Warm Amber", "Retro Cyan"
+  val shutterSound: String = "Classic Mechanical SLR", // "Classic Mechanical SLR", "Retro Film Advance", "Twin-Lens Snap", "Digital Beep", "Mute"
+  val dateStampFormat: String = "Classic Orange Digital" // "Classic Orange Digital", "Red LED Digital", "Yellow Retro Stamp", "White Typewriter", "Green CRT", "Disabled"
 )

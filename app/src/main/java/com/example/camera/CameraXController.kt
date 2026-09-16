@@ -310,15 +310,16 @@ class CameraXController(
   }
 
   /**
-   * Fast check to see if an image is all black / blank (common in emulators with virtual cameras)
+   * Fast check to see if an image is all black / blank / uninitialized (common in emulators with virtual cameras)
    */
   fun isBitmapBlank(bitmap: Bitmap): Boolean {
     val w = bitmap.width
     val h = bitmap.height
     if (w <= 0 || h <= 0) return true
-    var nonBlackPixels = 0
-    val stepX = (w / 12).coerceAtLeast(1)
-    val stepY = (h / 12).coerceAtLeast(1)
+    var totalLuminance = 0L
+    var brightPixelCount = 0
+    val stepX = (w / 16).coerceAtLeast(1)
+    val stepY = (h / 16).coerceAtLeast(1)
     var totalSampled = 0
     for (x in stepX until w step stepX) {
       for (y in stepY until h step stepY) {
@@ -326,14 +327,18 @@ class CameraXController(
         val r = (pixel shr 16) and 0xFF
         val g = (pixel shr 8) and 0xFF
         val b = pixel and 0xFF
+        val lum = (r * 299 + g * 587 + b * 114) / 1000
+        totalLuminance += lum
         totalSampled++
-        if (r > 15 || g > 15 || b > 15) {
-          nonBlackPixels++
+        if (lum > 28) {
+          brightPixelCount++
         }
       }
     }
-    // If fewer than 2% of pixels have any luminance, consider it blank
-    return totalSampled > 0 && (nonBlackPixels.toFloat() / totalSampled) < 0.02f
+    if (totalSampled == 0) return true
+    val avgLuminance = totalLuminance.toFloat() / totalSampled
+    val brightRatio = brightPixelCount.toFloat() / totalSampled
+    return avgLuminance < 22f || brightRatio < 0.06f
   }
 
   fun shutdown() {

@@ -723,9 +723,11 @@ fun CameraScreen(
               val executeShutter: () -> Unit = {
                 if (settings.isVideoMode) {
                   if (isRecordingVideo) {
+                    com.example.util.SoundEffectsManager.playVideoRecordSound(false, settings.shutterSoundEnabled)
                     cameraController.stopRecording()
                     isRecordingVideo = false
                   } else {
+                    com.example.util.SoundEffectsManager.playVideoRecordSound(true, settings.shutterSoundEnabled)
                     val videoFile = File(context.cacheDir, "COZY_VID_${System.currentTimeMillis()}.mp4")
                     isRecordingVideo = true
                     cameraController.startRecording(
@@ -742,6 +744,7 @@ fun CameraScreen(
                     )
                   }
                 } else {
+                  com.example.util.SoundEffectsManager.playShutterSound(settings.shutterSound, settings.shutterSoundEnabled)
                   if (settings.flashMode == "on" || settings.isFrontCamera) {
                     isScreenFlashActive = true
                   }

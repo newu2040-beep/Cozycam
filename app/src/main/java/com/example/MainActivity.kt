@@ -10,10 +10,12 @@ import androidx.compose.ui.Modifier
 import com.example.ui.CozyCamApp
 import com.example.ui.theme.CozyCamTheme
 import com.example.ui.theme.CozyObsidian
+import com.example.util.SoundEffectsManager
 
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+    SoundEffectsManager.init()
     enableEdgeToEdge()
     setContent {
       CozyCamTheme(darkTheme = true) {
@@ -25,5 +27,10 @@ class MainActivity : ComponentActivity() {
         }
       }
     }
+  }
+
+  override fun onDestroy() {
+    super.onDestroy()
+    SoundEffectsManager.release()
   }
 }

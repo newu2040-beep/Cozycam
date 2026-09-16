@@ -36,6 +36,7 @@ fun CozyCamApp(
   val currentParams by viewModel.currentParams.collectAsState()
   val cameraSettings by viewModel.cameraSettings.collectAsState()
   val processedBitmap by viewModel.currentProcessedBitmap.collectAsState()
+  val capturedBitmap by viewModel.currentCapturedBitmap.collectAsState()
   val photos by viewModel.photos.collectAsState()
   val favoritePresetIds by viewModel.favoritePresetIds.collectAsState()
   val timerCountdown by viewModel.timerCountdown.collectAsState()
@@ -121,8 +122,11 @@ fun CozyCamApp(
             onSetAspectRatio = { viewModel.setAspectRatio(it) },
             onOpenVideoSettings = {
               showSettingsSheet = false
-              // Video settings opened from within CameraScreen
-            }
+            },
+            onToggleCompactMode = { viewModel.setCompactMode(it) },
+            onSetThemeMode = { viewModel.setThemeMode(it) },
+            onSetShutterSound = { viewModel.setShutterSound(it) },
+            onSetDateStampFormat = { viewModel.setDateStampFormat(it) }
           )
         }
       }
@@ -143,6 +147,7 @@ fun CozyCamApp(
       AppScreen.EDITOR -> {
         EditorScreen(
           processedBitmap = processedBitmap,
+          originalBitmap = capturedBitmap,
           params = currentParams,
           saveMessage = saveMessage,
           isProcessing = isProcessing,

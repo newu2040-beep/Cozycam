@@ -8,6 +8,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -84,6 +86,7 @@ enum class EditorTool {
 @Composable
 fun EditorScreen(
   processedBitmap: Bitmap?,
+  originalBitmap: Bitmap? = null,
   params: FilmProcessingParams,
   saveMessage: String?,
   isProcessing: Boolean,
@@ -152,18 +155,31 @@ fun EditorScreen(
       }
 
       // 2. Cinematic Preview Area
+      var isHoldingCompare by remember { mutableStateOf(false) }
+
       Box(
         modifier = Modifier
           .weight(1f)
           .fillMaxWidth()
           .padding(horizontal = 16.dp, vertical = 8.dp)
           .clip(RoundedCornerShape(24.dp))
-          .background(CozyCharcoal),
+          .background(CozyCharcoal)
+          .pointerInput(Unit) {
+            detectTapGestures(
+              onPress = {
+                isHoldingCompare = true
+                tryAwaitRelease()
+                isHoldingCompare = false
+              }
+            )
+          },
         contentAlignment = Alignment.Center
       ) {
-        if (processedBitmap != null) {
+        val displayBmp = if (isHoldingCompare && originalBitmap != null) originalBitmap else processedBitmap
+
+        if (displayBmp != null) {
           Image(
-            bitmap = processedBitmap.asImageBitmap(),
+            bitmap = displayBmp.asImageBitmap(),
             contentDescription = "Processed Photo",
             modifier = Modifier
               .fillMaxSize()
@@ -175,6 +191,25 @@ fun EditorScreen(
             color = CozyCream,
             modifier = Modifier.size(36.dp)
           )
+        }
+
+        if (isHoldingCompare) {
+          Box(
+            modifier = Modifier
+              .align(Alignment.TopCenter)
+              .padding(top = 16.dp)
+              .clip(RoundedCornerShape(12.dp))
+              .background(Color.Black.copy(alpha = 0.75f))
+              .padding(horizontal = 12.dp, vertical = 6.dp)
+          ) {
+            Text(
+              text = "SHOWING ORIGINAL",
+              color = CozyAmberGold,
+              fontSize = 11.sp,
+              fontWeight = FontWeight.Bold,
+              letterSpacing = 1.2.sp
+            )
+          }
         }
 
         if (isProcessing) {
