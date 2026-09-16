@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import android.graphics.BitmapFactory
+import android.media.MediaMetadataRetriever
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -27,6 +28,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -50,6 +53,7 @@ import androidx.compose.ui.unit.sp
 import com.example.data.room.PhotoEntity
 import com.example.domain.models.CameraIllustrationType
 import com.example.ui.components.VintageCameraIllustration
+import com.example.ui.theme.CozyAmberGold
 import com.example.ui.theme.CozyCharcoal
 import com.example.ui.theme.CozyCharcoalElevated
 import com.example.ui.theme.CozyCharcoalSurface
@@ -71,10 +75,12 @@ fun GalleryScreen(
   modifier: Modifier = Modifier
 ) {
   var selectedTab by remember { mutableStateOf("All") }
-  val tabs = listOf("All", "Photos", "Favorites")
+  val tabs = listOf("All", "Photos", "Videos", "Favorites")
 
   val filteredPhotos = remember(photos, selectedTab) {
     when (selectedTab) {
+      "Videos" -> photos.filter { it.uri.endsWith(".mp4") || it.presetName.contains("Video") }
+      "Photos" -> photos.filter { !it.uri.endsWith(".mp4") && !it.presetName.contains("Video") }
       "Favorites" -> photos.filter { it.isFavorite }
       else -> photos
     }
@@ -213,8 +219,25 @@ private fun PhotoGridItem(
   modifier: Modifier = Modifier
 ) {
   val file = File(photo.uri)
+  val isVideo = remember(photo.uri, photo.presetName) {
+    photo.uri.endsWith(".mp4") || photo.presetName.contains("Video")
+  }
   val bitmap = remember(photo.uri) {
-    if (file.exists()) BitmapFactory.decodeFile(file.absolutePath) else null
+    if (file.exists()) {
+      if (isVideo) {
+        try {
+          val retriever = MediaMetadataRetriever()
+          retriever.setDataSource(file.absolutePath)
+          val frame = retriever.getFrameAtTime(500000, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+          retriever.release()
+          frame
+        } catch (e: Exception) {
+          null
+        }
+      } else {
+        BitmapFactory.decodeFile(file.absolutePath)
+      }
+    } else null
   }
 
   val dateStr = remember(photo.createdDate) {
@@ -233,7 +256,7 @@ private fun PhotoGridItem(
     if (bitmap != null) {
       Image(
         bitmap = bitmap.asImageBitmap(),
-        contentDescription = "Photo",
+        contentDescription = if (isVideo) "Video" else "Photo",
         contentScale = ContentScale.Crop,
         modifier = Modifier.fillMaxSize()
       )
@@ -244,7 +267,35 @@ private fun PhotoGridItem(
           .background(CozyCharcoal),
         contentAlignment = Alignment.Center
       ) {
-        Text("Photo", color = CozyMutedText, fontSize = 12.sp)
+        if (isVideo) {
+          Icon(
+            imageVector = Icons.Default.Videocam,
+            contentDescription = null,
+            tint = CozyAmberGold,
+            modifier = Modifier.size(32.dp)
+          )
+        } else {
+          Text("Photo", color = CozyMutedText, fontSize = 12.sp)
+        }
+      }
+    }
+
+    // Video play center indicator
+    if (isVideo) {
+      Box(
+        modifier = Modifier
+          .size(36.dp)
+          .clip(CircleShape)
+          .background(Color(0x99000000))
+          .align(Alignment.Center),
+        contentAlignment = Alignment.Center
+      ) {
+        Icon(
+          imageVector = Icons.Default.PlayCircle,
+          contentDescription = "Play Video",
+          tint = Color.White,
+          modifier = Modifier.size(24.dp)
+        )
       }
     }
 

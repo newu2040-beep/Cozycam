@@ -191,28 +191,147 @@ class CozyCamViewModel(application: Application) : AndroidViewModel(application)
 
   fun toggleGrid() {
     val newGrid = !_cameraSettings.value.gridEnabled
-    _cameraSettings.value = _cameraSettings.value.copy(gridEnabled = newGrid)
-    viewModelScope.launch { userPrefs.setGridEnabled(newGrid) }
+    setGridEnabled(newGrid)
+  }
+
+  fun setGridEnabled(enabled: Boolean) {
+    _cameraSettings.value = _cameraSettings.value.copy(gridEnabled = enabled)
+    viewModelScope.launch { userPrefs.setGridEnabled(enabled) }
+    performHapticFeedback()
+  }
+
+  fun toggleHaptics() {
+    val next = !_cameraSettings.value.hapticsEnabled
+    setHapticsEnabled(next)
+  }
+
+  fun setHapticsEnabled(enabled: Boolean) {
+    _cameraSettings.value = _cameraSettings.value.copy(hapticsEnabled = enabled)
+    viewModelScope.launch { userPrefs.setHapticsEnabled(enabled) }
+    if (enabled) performHapticFeedback()
+  }
+
+  fun toggleDateStamp() {
+    val next = !_cameraSettings.value.dateStampEnabled
+    setDateStampEnabled(next)
+  }
+
+  fun setDateStampEnabled(enabled: Boolean) {
+    _cameraSettings.value = _cameraSettings.value.copy(dateStampEnabled = enabled)
+    _currentParams.value = _currentParams.value.copy(dateStampEnabled = enabled)
+    viewModelScope.launch { userPrefs.setDateStampEnabled(enabled) }
     performHapticFeedback()
   }
 
   fun setTimerSeconds(seconds: Int) {
     _cameraSettings.value = _cameraSettings.value.copy(timerSeconds = seconds)
+    viewModelScope.launch { userPrefs.setTimerSeconds(seconds) }
     performHapticFeedback()
+  }
+
+  fun setResolution(resolution: String) {
+    _cameraSettings.value = _cameraSettings.value.copy(resolution = resolution)
+    viewModelScope.launch { userPrefs.setExportQuality(resolution) }
+    performHapticFeedback()
+  }
+
+  fun setFlashMode(mode: String) {
+    _cameraSettings.value = _cameraSettings.value.copy(flashMode = mode)
+    viewModelScope.launch { userPrefs.setFlashMode(mode) }
+    performHapticFeedback()
+  }
+
+  fun setAspectRatio(ratio: String) {
+    _cameraSettings.value = _cameraSettings.value.copy(aspectRatio = ratio)
+    viewModelScope.launch { userPrefs.setAspectRatio(ratio) }
+    performHapticFeedback()
+  }
+
+  // Active playing video entity (for video player modal)
+  private val _activePlayingVideo = MutableStateFlow<PhotoEntity?>(null)
+  val activePlayingVideo: StateFlow<PhotoEntity?> = _activePlayingVideo.asStateFlow()
+
+  fun playVideo(photo: PhotoEntity) {
+    _activePlayingVideo.value = photo
+  }
+
+  fun closeVideoPlayer() {
+    _activePlayingVideo.value = null
+  }
+
+  fun setLiveExposure(ev: Float) {
+    _cameraSettings.value = _cameraSettings.value.copy(exposureCompensation = ev)
+  }
+
+  fun setLiveTemperature(temp: Float) {
+    _cameraSettings.value = _cameraSettings.value.copy(liveTemperature = temp)
+  }
+
+  fun setVideoQuality(quality: String) {
+    _cameraSettings.value = _cameraSettings.value.copy(videoQuality = quality)
+  }
+
+  fun setVideoFps(fps: Int) {
+    _cameraSettings.value = _cameraSettings.value.copy(videoFps = fps)
+  }
+
+  fun setVideoAudioEnabled(enabled: Boolean) {
+    _cameraSettings.value = _cameraSettings.value.copy(videoAudioEnabled = enabled)
+  }
+
+  fun setSampleScene(scene: String) {
+    _cameraSettings.value = _cameraSettings.value.copy(activeSampleScene = scene)
+  }
+
+  fun onPhotoImported(uri: Uri) {
+    viewModelScope.launch {
+      _isProcessing.value = true
+      val context = getApplication<Application>()
+      val bmp = withContext(Dispatchers.IO) {
+        try {
+          context.contentResolver.openInputStream(uri)?.use { stream ->
+            BitmapFactory.decodeStream(stream)
+          }
+        } catch (e: Exception) {
+          null
+        }
+      } ?: loadSampleBitmap()
+
+      _currentCapturedBitmap.value = bmp
+      val baseParams = _currentParams.value
+      val combinedParams = baseParams.copy(
+        exposure = (baseParams.exposure + _cameraSettings.value.exposureCompensation).coerceIn(-1.0f, 1.0f),
+        temperature = (baseParams.temperature + _cameraSettings.value.liveTemperature).coerceIn(-1.0f, 1.0f)
+      )
+      val processed = withContext(Dispatchers.Default) {
+        FilmProcessor.processBitmap(bmp, combinedParams)
+      }
+      _currentProcessedBitmap.value = processed
+
+      // Automatically save to MediaStore Gallery (Pictures/CozyCam)
+      val filename = "COZY_IMPORT_${System.currentTimeMillis()}.jpg"
+      mediaStoreManager.saveBitmapToMediaStore(processed, filename)
+      val localFile = mediaStoreManager.saveLocally(processed, filename)
+
+      val entity = PhotoEntity(
+        uri = localFile.absolutePath,
+        presetId = _activePreset.value.id,
+        presetName = _activePreset.value.name,
+        width = processed.width,
+        height = processed.height,
+        camera = "imported"
+      )
+      val newId = photoDao.insertPhoto(entity)
+      _currentPhotoEntity.value = entity.copy(id = newId)
+
+      _isProcessing.value = false
+      _saveMessage.value = "Photo Imported & Filter Applied!"
+      _currentScreen.value = AppScreen.EDITOR
+    }
   }
 
   fun onShutterTriggered(cameraBitmap: Bitmap? = null) {
     viewModelScope.launch {
-      val timer = _cameraSettings.value.timerSeconds
-      if (timer > 0) {
-        for (i in timer downTo 1) {
-          _timerCountdown.value = i
-          performHapticFeedback()
-          delay(1000)
-        }
-        _timerCountdown.value = null
-      }
-
       // Trigger shutter flash
       _shutterFlashAnim.value = true
       performHapticFeedback()
@@ -221,14 +340,23 @@ class CozyCamViewModel(application: Application) : AndroidViewModel(application)
 
       _isProcessing.value = true
 
-      // If cameraBitmap is provided, use it; otherwise generate sample sunset frame
-      val rawBitmap = cameraBitmap ?: loadSampleBitmap()
+      // If cameraBitmap is provided and valid, use it; otherwise generate rich vintage scene frame
+      val isBlank = cameraBitmap == null || isBitmapBlank(cameraBitmap)
+      val rawBitmap = if (!isBlank && cameraBitmap != null) {
+        cameraBitmap
+      } else {
+        loadSampleBitmap()
+      }
       _currentCapturedBitmap.value = rawBitmap
 
-      // Apply film processing profile
-      val params = _currentParams.value
+      // Apply film processing profile combined with live exposure and live temperature
+      val currentP = _currentParams.value
+      val combinedParams = currentP.copy(
+        exposure = (currentP.exposure + _cameraSettings.value.exposureCompensation).coerceIn(-1.0f, 1.0f),
+        temperature = (currentP.temperature + _cameraSettings.value.liveTemperature).coerceIn(-1.0f, 1.0f)
+      )
       val processed = withContext(Dispatchers.Default) {
-        FilmProcessor.processBitmap(rawBitmap, params)
+        FilmProcessor.processBitmap(rawBitmap, combinedParams)
       }
       _currentProcessedBitmap.value = processed
 
@@ -292,14 +420,19 @@ class CozyCamViewModel(application: Application) : AndroidViewModel(application)
 
   fun openPhotoInEditor(photo: PhotoEntity) {
     viewModelScope.launch {
+      if (photo.uri.endsWith(".mp4") || photo.presetName.contains("Video")) {
+        playVideo(photo)
+        return@launch
+      }
+
       _currentPhotoEntity.value = photo
       val preset = FilmPresetRepository.getPresetById(photo.presetId)
       _activePreset.value = preset
       _currentParams.value = preset.defaultParams
 
       val file = File(photo.uri)
-      val bitmap = if (file.exists()) {
-        BitmapFactory.decodeFile(file.absolutePath)
+      val bitmap = if (file.exists() && !file.name.endsWith(".mp4")) {
+        BitmapFactory.decodeFile(file.absolutePath) ?: loadSampleBitmap()
       } else {
         loadSampleBitmap()
       }
@@ -307,6 +440,33 @@ class CozyCamViewModel(application: Application) : AndroidViewModel(application)
       _currentProcessedBitmap.value = bitmap
       _currentScreen.value = AppScreen.EDITOR
     }
+  }
+
+  private fun isBitmapBlank(bitmap: Bitmap): Boolean {
+    val w = bitmap.width
+    val h = bitmap.height
+    if (w <= 0 || h <= 0) return true
+    var nonBlackPixels = 0
+    val stepX = (w / 12).coerceAtLeast(1)
+    val stepY = (h / 12).coerceAtLeast(1)
+    var totalSampled = 0
+    for (x in stepX until w step stepX) {
+      for (y in stepY until h step stepY) {
+        val pixel = bitmap.getPixel(x, y)
+        val r = (pixel shr 16) and 0xFF
+        val g = (pixel shr 8) and 0xFF
+        val b = pixel and 0xFF
+        totalSampled++
+        if (r > 15 || g > 15 || b > 15) {
+          nonBlackPixels++
+        }
+      }
+    }
+    return totalSampled > 0 && (nonBlackPixels.toFloat() / totalSampled) < 0.02f
+  }
+
+  private fun loadSampleBitmap(): Bitmap {
+    return FilmProcessor.createVintageSceneBitmap(_cameraSettings.value.activeSampleScene, 1080, 1440)
   }
 
   private fun reprocessImage(base: Bitmap, params: FilmProcessingParams) {
@@ -375,26 +535,6 @@ class CozyCamViewModel(application: Application) : AndroidViewModel(application)
       photoDao.deletePhotoById(photoId)
       performHapticFeedback()
     }
-  }
-
-  private fun loadSampleBitmap(): Bitmap {
-    val context = getApplication<Application>()
-    // Try to load generated sample sunset image
-    return try {
-      val resId = R.drawable.img_sample_viewfinder
-      val opts = BitmapFactory.Options().apply { inPreferredConfig = Bitmap.Config.ARGB_8888 }
-      BitmapFactory.decodeResource(context.resources, resId, opts)
-        ?: FilmProcessor.createSampleBitmap()
-    } catch (e: Exception) {
-      FilmProcessor.createSampleBitmap()
-    }
-  }
-
-  fun toggleHaptics() {
-    val current = _cameraSettings.value.hapticsEnabled
-    _cameraSettings.value = _cameraSettings.value.copy(hapticsEnabled = !current)
-    viewModelScope.launch { userPrefs.setHapticsEnabled(!current) }
-    performHapticFeedback()
   }
 
   fun performHapticFeedback() {

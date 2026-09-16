@@ -320,63 +320,261 @@ object FilmProcessor {
   }
 
   fun createSampleBitmap(width: Int = 1080, height: Int = 1440): Bitmap {
+    return createVintageSceneBitmap("sunset", width, height)
+  }
+
+  fun createVintageSceneBitmap(style: String = "sunset", width: Int = 1080, height: Int = 1440): Bitmap {
     val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
 
+    when (style.lowercase()) {
+      "cafe" -> drawVintageCafeScene(canvas, width, height)
+      "coastal" -> drawCoastalSunsetScene(canvas, width, height)
+      else -> drawGoldenHourSkylineScene(canvas, width, height)
+    }
+
+    return bitmap
+  }
+
+  private fun drawGoldenHourSkylineScene(canvas: Canvas, width: Int, height: Int) {
     // Warm golden hour sunset background gradient
     val skyPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
       shader = LinearGradient(
         0f, 0f, 0f, height.toFloat(),
         intArrayOf(
-          Color.rgb(45, 35, 60),   // Twilight indigo
-          Color.rgb(175, 80, 50),  // Deep burnt orange
-          Color.rgb(240, 160, 60), // Golden amber
-          Color.rgb(255, 215, 120),// Soft yellow
-          Color.rgb(25, 20, 25)    // Ground silhouette
+          Color.rgb(65, 45, 80),   // Twilight indigo
+          Color.rgb(195, 95, 60),  // Deep burnt orange
+          Color.rgb(250, 175, 75), // Golden amber
+          Color.rgb(255, 230, 150),// Soft bright yellow
+          Color.rgb(40, 32, 38)    // Ground silhouette
         ),
-        floatArrayOf(0f, 0.35f, 0.65f, 0.8f, 1f),
+        floatArrayOf(0f, 0.35f, 0.62f, 0.78f, 1f),
         Shader.TileMode.CLAMP
       )
     }
     canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), skyPaint)
 
+    // Sun disc behind silhouettes
+    val sunPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+      shader = RadialGradient(
+        width * 0.45f, height * 0.58f, width * 0.22f,
+        intArrayOf(Color.rgb(255, 245, 210), Color.argb(120, 255, 190, 80), Color.TRANSPARENT),
+        floatArrayOf(0f, 0.5f, 1f),
+        Shader.TileMode.CLAMP
+      )
+    }
+    canvas.drawCircle(width * 0.45f, height * 0.58f, width * 0.22f, sunPaint)
+
     // City skyline & street silhouette
     val cityPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-      color = Color.rgb(22, 18, 22)
+      color = Color.rgb(32, 26, 32)
     }
 
     // Street perspective
-    val groundY = height * 0.75f
+    val groundY = height * 0.72f
     canvas.drawRect(0f, groundY, width.toFloat(), height.toFloat(), cityPaint)
 
-    // Buildings silhouette
-    val b1 = RectF(0f, groundY - 260f, width * 0.32f, groundY)
-    val b2 = RectF(width * 0.68f, groundY - 320f, width.toFloat(), groundY)
-    val b3 = RectF(width * 0.28f, groundY - 140f, width * 0.45f, groundY)
-    val b4 = RectF(width * 0.55f, groundY - 180f, width * 0.72f, groundY)
+    // Buildings silhouette with lit windows
+    val b1 = RectF(0f, groundY - 320f, width * 0.32f, groundY)
+    val b2 = RectF(width * 0.66f, groundY - 380f, width.toFloat(), groundY)
+    val b3 = RectF(width * 0.28f, groundY - 200f, width * 0.46f, groundY)
+    val b4 = RectF(width * 0.54f, groundY - 240f, width * 0.72f, groundY)
     canvas.drawRect(b1, cityPaint)
     canvas.drawRect(b2, cityPaint)
     canvas.drawRect(b3, cityPaint)
     canvas.drawRect(b4, cityPaint)
 
+    // Lit windows in buildings
+    val windowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+      color = Color.rgb(255, 235, 160)
+    }
+    for (i in 0..4) {
+      for (j in 0..6) {
+        val wx = 30f + i * 45f
+        val wy = groundY - 290f + j * 40f
+        if ((i + j) % 2 == 0) {
+          canvas.drawRoundRect(RectF(wx, wy, wx + 20f, wy + 24f), 3f, 3f, windowPaint)
+        }
+      }
+    }
+    for (i in 0..4) {
+      for (j in 0..7) {
+        val wx = width * 0.69f + i * 45f
+        val wy = groundY - 350f + j * 42f
+        if ((i * 2 + j) % 3 != 0) {
+          canvas.drawRoundRect(RectF(wx, wy, wx + 20f, wy + 24f), 3f, 3f, windowPaint)
+        }
+      }
+    }
+
     // Glowing street lights & car taillights
     val lightPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-      color = Color.rgb(255, 220, 140)
+      color = Color.rgb(255, 235, 160)
     }
     val tailLightPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
       color = Color.rgb(255, 80, 50)
     }
 
     val carY = groundY + 120f
-    canvas.drawCircle(width * 0.48f, carY, 6f, tailLightPaint)
-    canvas.drawCircle(width * 0.52f, carY, 6f, tailLightPaint)
-    canvas.drawCircle(width * 0.42f, carY + 80f, 8f, tailLightPaint)
-    canvas.drawCircle(width * 0.47f, carY + 80f, 8f, tailLightPaint)
+    canvas.drawCircle(width * 0.48f, carY, 9f, tailLightPaint)
+    canvas.drawCircle(width * 0.54f, carY, 9f, tailLightPaint)
+    canvas.drawCircle(width * 0.38f, carY + 90f, 12f, tailLightPaint)
+    canvas.drawCircle(width * 0.45f, carY + 90f, 12f, tailLightPaint)
 
-    // Street lamp posts
-    canvas.drawCircle(width * 0.25f, groundY - 30f, 12f, lightPaint)
-    canvas.drawCircle(width * 0.75f, groundY - 50f, 12f, lightPaint)
+    // Street lamp posts with warm golden flare
+    val lampFlarePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+      shader = RadialGradient(
+        width * 0.22f, groundY - 40f, 50f,
+        intArrayOf(Color.argb(220, 255, 240, 180), Color.TRANSPARENT),
+        null, Shader.TileMode.CLAMP
+      )
+    }
+    canvas.drawCircle(width * 0.22f, groundY - 40f, 50f, lampFlarePaint)
+    canvas.drawCircle(width * 0.22f, groundY - 40f, 14f, lightPaint)
 
-    return bitmap
+    val lampFlare2 = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+      shader = RadialGradient(
+        width * 0.78f, groundY - 60f, 60f,
+        intArrayOf(Color.argb(220, 255, 240, 180), Color.TRANSPARENT),
+        null, Shader.TileMode.CLAMP
+      )
+    }
+    canvas.drawCircle(width * 0.78f, groundY - 60f, 60f, lampFlare2)
+    canvas.drawCircle(width * 0.78f, groundY - 60f, 16f, lightPaint)
+  }
+
+  private fun drawVintageCafeScene(canvas: Canvas, width: Int, height: Int) {
+    // Warm ambient coffee shop wood and brick background
+    val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+      shader = LinearGradient(
+        0f, 0f, 0f, height.toFloat(),
+        intArrayOf(
+          Color.rgb(48, 30, 24),  // Dark roast brown
+          Color.rgb(85, 52, 38),  // Warm brick
+          Color.rgb(138, 88, 56), // Amber wood
+          Color.rgb(42, 28, 22)   // Deep mahogany
+        ),
+        floatArrayOf(0f, 0.4f, 0.75f, 1f),
+        Shader.TileMode.CLAMP
+      )
+    }
+    canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bgPaint)
+
+    // Warm tungsten overhead lamp glow
+    val lampGlow = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+      shader = RadialGradient(
+        width * 0.5f, height * 0.25f, width * 0.6f,
+        intArrayOf(Color.argb(210, 255, 215, 140), Color.argb(80, 220, 140, 60), Color.TRANSPARENT),
+        floatArrayOf(0f, 0.4f, 1f),
+        Shader.TileMode.CLAMP
+      )
+    }
+    canvas.drawCircle(width * 0.5f, height * 0.25f, width * 0.6f, lampGlow)
+
+    // Tabletop
+    val tableTopY = height * 0.62f
+    val tablePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+      color = Color.rgb(65, 42, 30)
+    }
+    canvas.drawRect(0f, tableTopY, width.toFloat(), height.toFloat(), tablePaint)
+
+    // Vinyl record on table
+    val vinylCenterX = width * 0.32f
+    val vinylCenterY = tableTopY + 180f
+    val vinylPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.rgb(22, 20, 20) }
+    canvas.drawCircle(vinylCenterX, vinylCenterY, 160f, vinylPaint)
+    // Grooves
+    val groovePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+      color = Color.rgb(45, 42, 42)
+      style = Paint.Style.STROKE
+      strokeWidth = 2f
+    }
+    for (r in 60..150 step 15) {
+      canvas.drawCircle(vinylCenterX, vinylCenterY, r.toFloat(), groovePaint)
+    }
+    // Record label
+    val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.rgb(215, 80, 55) }
+    canvas.drawCircle(vinylCenterX, vinylCenterY, 45f, labelPaint)
+    canvas.drawCircle(vinylCenterX, vinylCenterY, 8f, vinylPaint)
+
+    // Ceramic Coffee Cup with latte art
+    val cupCenterX = width * 0.72f
+    val cupCenterY = tableTopY + 160f
+    val saucerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.rgb(235, 230, 220) }
+    canvas.drawCircle(cupCenterX, cupCenterY, 110f, saucerPaint)
+    val cupPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.rgb(248, 245, 240) }
+    canvas.drawCircle(cupCenterX, cupCenterY, 80f, cupPaint)
+    val coffeePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.rgb(112, 70, 42) }
+    canvas.drawCircle(cupCenterX, cupCenterY, 70f, coffeePaint)
+    val creamPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.rgb(250, 240, 225) }
+    canvas.drawCircle(cupCenterX, cupCenterY, 25f, creamPaint)
+  }
+
+  private fun drawCoastalSunsetScene(canvas: Canvas, width: Int, height: Int) {
+    // Vibrant California coastal sunset
+    val skyPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+      shader = LinearGradient(
+        0f, 0f, 0f, height.toFloat(),
+        intArrayOf(
+          Color.rgb(35, 38, 75),   // Dusk navy
+          Color.rgb(180, 65, 80),  // Magenta sunset
+          Color.rgb(250, 140, 60), // Vibrant peach
+          Color.rgb(255, 220, 110),// Golden horizon
+          Color.rgb(30, 50, 65)    // Ocean reflect
+        ),
+        floatArrayOf(0f, 0.32f, 0.58f, 0.72f, 1f),
+        Shader.TileMode.CLAMP
+      )
+    }
+    canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), skyPaint)
+
+    // Big setting sun
+    val sunPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+      shader = RadialGradient(
+        width * 0.5f, height * 0.65f, 120f,
+        intArrayOf(Color.rgb(255, 240, 200), Color.rgb(255, 160, 60), Color.TRANSPARENT),
+        floatArrayOf(0f, 0.6f, 1f),
+        Shader.TileMode.CLAMP
+      )
+    }
+    canvas.drawCircle(width * 0.5f, height * 0.65f, 120f, sunPaint)
+
+    // Ocean horizon line
+    val horizonY = height * 0.7f
+    val oceanPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+      color = Color.rgb(38, 48, 62)
+    }
+    canvas.drawRect(0f, horizonY, width.toFloat(), height.toFloat(), oceanPaint)
+
+    // Golden sun reflection ripples on water
+    val ripplePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+      color = Color.argb(180, 255, 210, 120)
+    }
+    for (i in 0..12) {
+      val ry = horizonY + 15f + i * 18f
+      val rw = (180f - i * 10f).coerceAtLeast(30f)
+      canvas.drawRoundRect(RectF(width * 0.5f - rw * 0.5f, ry, width * 0.5f + rw * 0.5f, ry + 6f), 3f, 3f, ripplePaint)
+    }
+
+    // Palm tree silhouettes
+    val palmPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+      color = Color.rgb(20, 22, 26)
+    }
+    // Left palm trunk
+    canvas.drawRect(width * 0.18f, height * 0.4f, width * 0.21f, height.toFloat(), palmPaint)
+    // Fronds
+    val pCenterX = width * 0.195f
+    val pCenterY = height * 0.42f
+    for (ang in listOf(-60f, -30f, 0f, 30f, 60f, 90f, 130f, 170f, 210f)) {
+      val rad = Math.toRadians(ang.toDouble())
+      val ex = pCenterX + (Math.cos(rad) * 140f).toFloat()
+      val ey = pCenterY + (Math.sin(rad) * 90f).toFloat()
+      val frondPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(20, 22, 26)
+        strokeWidth = 10f
+        style = Paint.Style.STROKE
+      }
+      canvas.drawLine(pCenterX, pCenterY, ex, ey, frondPaint)
+    }
   }
 }

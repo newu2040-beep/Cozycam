@@ -2,7 +2,10 @@ package com.example
 
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
-import com.example.ui.theme.MyApplicationTheme
+import androidx.compose.ui.unit.dp
+import com.example.domain.models.CameraIllustrationType
+import com.example.ui.components.VintageCameraIllustration
+import com.example.ui.theme.CozyCamTheme
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
 import com.github.takahirom.roborazzi.captureRoboImage
 import org.junit.Rule
@@ -21,7 +24,11 @@ class GreetingScreenshotTest {
 
   @Test
   fun greeting_screenshot() {
-    composeTestRule.setContent { MyApplicationTheme { Greeting("Robolectric") } }
+    composeTestRule.setContent {
+      CozyCamTheme {
+        VintageCameraIllustration(type = CameraIllustrationType.RANGEFINDER_35MM, size = 120.dp)
+      }
+    }
 
     composeTestRule.onRoot().captureRoboImage(filePath = "src/test/screenshots/greeting.png")
   }

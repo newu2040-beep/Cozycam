@@ -17,6 +17,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ui.viewmodel.AppScreen
+import com.example.ui.components.VideoPlayerDialog
 import com.example.ui.screens.CameraScreen
 import com.example.ui.screens.EditorScreen
 import com.example.ui.screens.GalleryScreen
@@ -41,6 +42,7 @@ fun CozyCamApp(
   val shutterFlashAnim by viewModel.shutterFlashAnim.collectAsState()
   val isProcessing by viewModel.isProcessing.collectAsState()
   val saveMessage by viewModel.saveMessage.collectAsState()
+  val activePlayingVideo by viewModel.activePlayingVideo.collectAsState()
 
   var showSettingsSheet by remember { mutableStateOf(false) }
 
@@ -95,16 +97,32 @@ fun CozyCamApp(
           onOpenPresets = { viewModel.navigateTo(AppScreen.PRESETS) },
           onOpenGallery = { viewModel.navigateTo(AppScreen.GALLERY) },
           onShutterClick = { bmp -> viewModel.onShutterTriggered(bmp) },
-          onVideoRecorded = { file -> viewModel.onVideoRecorded(file) }
+          onVideoRecorded = { file -> viewModel.onVideoRecorded(file) },
+          onSetExposure = { viewModel.setLiveExposure(it) },
+          onSetTemperature = { viewModel.setLiveTemperature(it) },
+          onUpdateVideoQuality = { viewModel.setVideoQuality(it) },
+          onUpdateVideoFps = { viewModel.setVideoFps(it) },
+          onToggleVideoAudio = { viewModel.setVideoAudioEnabled(it) },
+          onSelectSampleScene = { viewModel.setSampleScene(it) },
+          onPhotoImported = { viewModel.onPhotoImported(it) }
         )
 
         if (showSettingsSheet) {
           SettingsSheet(
             settings = cameraSettings,
             onDismiss = { showSettingsSheet = false },
-            onToggleGrid = { viewModel.toggleGrid() },
+            onToggleGrid = { viewModel.setGridEnabled(it) },
+            onToggleHaptics = { viewModel.setHapticsEnabled(it) },
+            onToggleDateStamp = { viewModel.setDateStampEnabled(it) },
             onSetTimer = { viewModel.setTimerSeconds(it) },
-            onToggleHaptics = { viewModel.toggleHaptics() }
+            onSetResolution = { viewModel.setResolution(it) },
+            onSetFlashMode = { viewModel.setFlashMode(it) },
+            onToggleCameraFacing = { viewModel.toggleCameraFacing() },
+            onSetAspectRatio = { viewModel.setAspectRatio(it) },
+            onOpenVideoSettings = {
+              showSettingsSheet = false
+              // Video settings opened from within CameraScreen
+            }
           )
         }
       }
@@ -146,5 +164,13 @@ fun CozyCamApp(
         )
       }
     }
+  }
+
+  // Vintage Video Player Modal
+  activePlayingVideo?.let { videoEntity ->
+    VideoPlayerDialog(
+      photo = videoEntity,
+      onDismiss = { viewModel.closeVideoPlayer() }
+    )
   }
 }

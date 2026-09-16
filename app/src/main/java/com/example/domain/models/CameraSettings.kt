@@ -13,5 +13,11 @@ data class CameraSettings(
   val isFrontCamera: Boolean = false,
   val isVideoMode: Boolean = false,
   val zoomLevel: Float = 1.0f,
-  val exposureCompensation: Float = 0.0f
+  val exposureCompensation: Float = 0.0f,
+  val liveTemperature: Float = 0.0f,      // -1.0 (Cool) to 1.0 (Warm)
+  val videoQuality: String = "1080p FHD", // "4K UHD", "1080p FHD", "720p HD", "480p SD"
+  val videoFps: Int = 30,                 // 24, 30, 60
+  val videoAudioEnabled: Boolean = true,
+  val videoBitratePreset: String = "High",// "High", "Standard", "Vintage"
+  val activeSampleScene: String = "sunset" // "sunset", "cafe", "coastal"
 )

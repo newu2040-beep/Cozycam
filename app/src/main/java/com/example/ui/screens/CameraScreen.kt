@@ -10,6 +10,7 @@ import android.os.Build
 import android.os.Environment
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.view.PreviewView
 import androidx.compose.animation.AnimatedVisibility
@@ -36,16 +37,18 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.Cameraswitch
 import androidx.compose.material.icons.filled.FlashAuto
 import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
-import androidx.compose.material.icons.filled.GridOn
 import androidx.compose.material.icons.filled.GridOff
+import androidx.compose.material.icons.filled.GridOn
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material.icons.filled.Timer3
 import androidx.compose.material.icons.filled.Timer10
+import androidx.compose.material.icons.filled.Timer3
+import androidx.compose.material.icons.filled.VideoSettings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -55,17 +58,20 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -77,8 +83,10 @@ import com.example.data.room.PhotoEntity
 import com.example.domain.models.CameraSettings
 import com.example.domain.models.FilmPreset
 import com.example.domain.models.FilmProcessingParams
+import com.example.ui.components.CameraToneControlBar
 import com.example.ui.components.FilmOverlayEffect
 import com.example.ui.components.ShutterButton
+import com.example.ui.components.VideoSettingsSheet
 import com.example.ui.components.VintageCameraIllustration
 import com.example.ui.theme.CozyAmberGold
 import com.example.ui.theme.CozyBorder
@@ -89,6 +97,8 @@ import com.example.ui.theme.CozyCream
 import com.example.ui.theme.CozyMutedText
 import com.example.ui.theme.CozyObsidian
 import java.io.File
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 
 @Composable
 fun CameraScreen(
@@ -111,6 +121,13 @@ fun CameraScreen(
   onOpenGallery: () -> Unit,
   onShutterClick: (Bitmap?) -> Unit,
   onVideoRecorded: (File) -> Unit = {},
+  onSetExposure: (Float) -> Unit = {},
+  onSetTemperature: (Float) -> Unit = {},
+  onUpdateVideoQuality: (String) -> Unit = {},
+  onUpdateVideoFps: (Int) -> Unit = {},
+  onToggleVideoAudio: (Boolean) -> Unit = {},
+  onSelectSampleScene: (String) -> Unit = {},
+  onPhotoImported: (Uri) -> Unit = {},
   modifier: Modifier = Modifier
 ) {
   val context = LocalContext.current
@@ -146,6 +163,14 @@ fun CameraScreen(
     permissionsMap = results
   }
 
+  val photoPickerLauncher = rememberLauncherForActivityResult(
+    contract = ActivityResultContracts.PickVisualMedia()
+  ) { uri ->
+    if (uri != null) {
+      onPhotoImported(uri)
+    }
+  }
+
   val hasCameraPermission = permissionsMap[Manifest.permission.CAMERA] == true ||
       ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
 
@@ -162,10 +187,44 @@ fun CameraScreen(
     CameraXController(context, lifecycleOwner)
   }
 
+  val coroutineScope = rememberCoroutineScope()
+  var previewViewRef by remember { mutableStateOf<PreviewView?>(null) }
   var isCameraXActive by remember { mutableStateOf(false) }
   var isRecordingVideo by remember { mutableStateOf(false) }
   var recordingDurationSeconds by remember { mutableStateOf(0) }
+  var showVideoSettingsSheet by remember { mutableStateOf(false) }
+  var activeTimerCountdown by remember { mutableStateOf<Int?>(null) }
+  var timerJob by remember { mutableStateOf<Job?>(null) }
+  var isScreenFlashActive by remember { mutableStateOf(false) }
 
+  // Rebind camera whenever mode, facing, video quality, or flash changes
+  LaunchedEffect(settings.isVideoMode, settings.isFrontCamera, settings.videoQuality, settings.flashMode, hasCameraPermission) {
+    previewViewRef?.let { pv ->
+      if (hasCameraPermission) {
+        cameraController.startCamera(
+          previewView = pv,
+          isFront = settings.isFrontCamera,
+          isVideoMode = settings.isVideoMode,
+          videoQualityName = settings.videoQuality,
+          flashMode = settings.flashMode
+        ) { available ->
+          isCameraXActive = available
+        }
+      }
+    }
+  }
+
+  // Update hardware flash mode
+  LaunchedEffect(settings.flashMode) {
+    cameraController.setFlashMode(settings.flashMode)
+  }
+
+  // Update exposure whenever setting changes
+  LaunchedEffect(settings.exposureCompensation) {
+    cameraController.setExposure(settings.exposureCompensation)
+  }
+
+  // Recording duration timer
   LaunchedEffect(isRecordingVideo) {
     if (isRecordingVideo) {
       recordingDurationSeconds = 0
@@ -180,6 +239,14 @@ fun CameraScreen(
     onDispose {
       cameraController.shutdown()
     }
+  }
+
+  // Combine film preset params with live exposure and live temperature
+  val liveParams = remember(params, settings.exposureCompensation, settings.liveTemperature) {
+    params.copy(
+      exposure = (params.exposure + settings.exposureCompensation).coerceIn(-1.0f, 1.0f),
+      temperature = (params.temperature + settings.liveTemperature).coerceIn(-1.0f, 1.0f)
+    )
   }
 
   Box(
@@ -198,40 +265,68 @@ fun CameraScreen(
       Row(
         modifier = Modifier
           .fillMaxWidth()
-          .padding(horizontal = 16.dp, vertical = 6.dp),
+          .padding(horizontal = 16.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
       ) {
-        // Aspect Ratio Pill (3:4, 1:1, 16:9)
-        Box(
-          modifier = Modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(CozyCharcoalSurface)
-            .clickable(onClick = onCycleAspectRatio)
-            .padding(horizontal = 12.dp, vertical = 6.dp)
-        ) {
-          Text(
-            text = settings.aspectRatio,
-            color = CozyCream,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.SemiBold
-          )
-        }
+        // In Video Mode: Video Quality Pill; In Photo Mode: Aspect Ratio & Resolution
+        if (settings.isVideoMode) {
+          Box(
+            modifier = Modifier
+              .clip(RoundedCornerShape(16.dp))
+              .background(Color(0xFF8A3022))
+              .clickable { showVideoSettingsSheet = true }
+              .padding(horizontal = 12.dp, vertical = 6.dp)
+          ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+              Icon(
+                imageVector = Icons.Default.VideoSettings,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(14.dp)
+              )
+              Spacer(modifier = Modifier.width(6.dp))
+              Text(
+                text = "${settings.videoQuality} • ${settings.videoFps}fps",
+                color = Color.White,
+                fontSize = 11.sp,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold
+              )
+            }
+          }
+        } else {
+          // Aspect Ratio Pill (3:4, 1:1, 16:9)
+          Box(
+            modifier = Modifier
+              .clip(RoundedCornerShape(16.dp))
+              .background(CozyCharcoalSurface)
+              .clickable(onClick = onCycleAspectRatio)
+              .padding(horizontal = 12.dp, vertical = 6.dp)
+          ) {
+            Text(
+              text = settings.aspectRatio,
+              color = CozyCream,
+              fontSize = 12.sp,
+              fontWeight = FontWeight.SemiBold
+            )
+          }
 
-        // Resolution Pill (12MP, 24MP, 8MP)
-        Box(
-          modifier = Modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(CozyCharcoalSurface)
-            .clickable(onClick = onCycleResolution)
-            .padding(horizontal = 12.dp, vertical = 6.dp)
-        ) {
-          Text(
-            text = settings.resolution,
-            color = CozyCream,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.SemiBold
-          )
+          // Resolution Pill (12MP, 24MP, 8MP)
+          Box(
+            modifier = Modifier
+              .clip(RoundedCornerShape(16.dp))
+              .background(CozyCharcoalSurface)
+              .clickable(onClick = onCycleResolution)
+              .padding(horizontal = 12.dp, vertical = 6.dp)
+          ) {
+            Text(
+              text = settings.resolution,
+              color = CozyCream,
+              fontSize = 12.sp,
+              fontWeight = FontWeight.SemiBold
+            )
+          }
         }
 
         // Flash Toggle
@@ -305,7 +400,14 @@ fun CameraScreen(
             factory = { ctx ->
               PreviewView(ctx).apply {
                 scaleType = PreviewView.ScaleType.FILL_CENTER
-                cameraController.startCamera(this, settings.isFrontCamera) { available ->
+                previewViewRef = this
+                cameraController.startCamera(
+                  previewView = this,
+                  isFront = settings.isFrontCamera,
+                  isVideoMode = settings.isVideoMode,
+                  videoQualityName = settings.videoQuality,
+                  flashMode = settings.flashMode
+                ) { available ->
                   isCameraXActive = available
                 }
               }
@@ -314,27 +416,54 @@ fun CameraScreen(
           )
         }
 
-        // Fallback or ambient viewfinder image when camera is unavailable or emulator
+        // Fallback or ambient viewfinder image when camera is unavailable or sensor is inactive
         if (!hasCameraPermission || !isCameraXActive) {
           Image(
             painter = painterResource(id = R.drawable.img_sample_viewfinder),
             contentDescription = "Viewfinder Frame",
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+              .fillMaxSize()
+              .graphicsLayer {
+                if (settings.isFrontCamera) scaleX = -1f
+              },
             contentScale = ContentScale.Crop
           )
         }
 
         // Real-time Film grading & Vignette & Date stamp & Grid overlay!
+        // Uses combined live exposure and temperature so viewfinder immediately responds to sliders!
         FilmOverlayEffect(
-          params = params,
+          params = liveParams,
+          preset = activePreset,
           showGrid = settings.gridEnabled
         )
+
+        // Front selfie badge indicator
+        if (settings.isFrontCamera) {
+          Box(
+            modifier = Modifier
+              .align(Alignment.TopStart)
+              .padding(start = 14.dp, top = 14.dp)
+              .clip(RoundedCornerShape(8.dp))
+              .background(Color(0xB3191817))
+              .border(0.8.dp, CozyAmberGold.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
+              .padding(horizontal = 8.dp, vertical = 4.dp)
+          ) {
+            Text(
+              text = "FRONT SELFIE",
+              color = CozyAmberGold,
+              fontSize = 10.sp,
+              fontWeight = FontWeight.Bold,
+              fontFamily = FontFamily.Monospace
+            )
+          }
+        }
 
         // Viewfinder Zoom Pills (0.5x, 1x, 2x) at bottom center
         Row(
           modifier = Modifier
             .align(Alignment.BottomCenter)
-            .padding(bottom = 14.dp)
+            .padding(bottom = 12.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(Color(0x99191817))
             .padding(horizontal = 6.dp, vertical = 4.dp),
@@ -363,23 +492,38 @@ fun CameraScreen(
         }
 
         // Self-timer countdown overlay
-        if (timerCountdown != null) {
+        val currentCountdown = activeTimerCountdown ?: timerCountdown
+        if (currentCountdown != null) {
           Box(
             modifier = Modifier
               .fillMaxSize()
-              .background(Color(0x66000000)),
+              .background(Color(0x88000000))
+              .clickable {
+                timerJob?.cancel()
+                timerJob = null
+                activeTimerCountdown = null
+              },
             contentAlignment = Alignment.Center
           ) {
-            Text(
-              text = timerCountdown.toString(),
-              color = CozyCream,
-              fontSize = 72.sp,
-              fontWeight = FontWeight.Bold
-            )
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+              Text(
+                text = currentCountdown.toString(),
+                color = CozyAmberGold,
+                fontSize = 84.sp,
+                fontWeight = FontWeight.Black,
+                fontFamily = FontFamily.Monospace
+              )
+              Text(
+                text = "Tap to cancel timer",
+                color = CozyCream.copy(alpha = 0.85f),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium
+              )
+            }
           }
         }
 
-        // Recording indicator badge
+        // Recording indicator badge in video mode
         if (isRecordingVideo) {
           Box(
             modifier = Modifier
@@ -412,11 +556,25 @@ fun CameraScreen(
         }
       }
 
-      // 3. Lower Control Section (Preset card, Photo/Video mode, Shutter bar)
+      // 3. Middle Section: Temperature and Exposure Sliders Bar!
+      CameraToneControlBar(
+        exposure = settings.exposureCompensation,
+        temperature = settings.liveTemperature,
+        onExposureChange = { ev ->
+          onSetExposure(ev)
+          cameraController.setExposure(ev)
+        },
+        onTemperatureChange = { temp ->
+          onSetTemperature(temp)
+        },
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)
+      )
+
+      // 4. Lower Control Section (Preset card, Photo/Video mode, Shutter bar)
       Column(
         modifier = Modifier
           .fillMaxWidth()
-          .padding(horizontal = 20.dp, vertical = 8.dp),
+          .padding(horizontal = 20.dp, vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally
       ) {
         // Selected Preset Card Pill (tapping opens Presets screen!)
@@ -472,7 +630,7 @@ fun CameraScreen(
           }
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         // Mode switch: PHOTO / VIDEO
         Row(
@@ -487,7 +645,7 @@ fun CameraScreen(
               .clip(RoundedCornerShape(12.dp))
               .background(if (!settings.isVideoMode) CozyCream else Color.Transparent)
               .clickable { if (settings.isVideoMode) onToggleVideoMode() }
-              .padding(horizontal = 16.dp, vertical = 6.dp)
+              .padding(horizontal = 18.dp, vertical = 6.dp)
           ) {
             Text(
               text = "PHOTO",
@@ -500,22 +658,22 @@ fun CameraScreen(
           Box(
             modifier = Modifier
               .clip(RoundedCornerShape(12.dp))
-              .background(if (settings.isVideoMode) CozyCream else Color.Transparent)
+              .background(if (settings.isVideoMode) Color(0xFFE05A47) else Color.Transparent)
               .clickable { if (!settings.isVideoMode) onToggleVideoMode() }
-              .padding(horizontal = 16.dp, vertical = 6.dp)
+              .padding(horizontal = 18.dp, vertical = 6.dp)
           ) {
             Text(
               text = "VIDEO",
-              color = if (settings.isVideoMode) CozyObsidian else CozyMutedText,
+              color = if (settings.isVideoMode) Color.White else CozyMutedText,
               fontSize = 12.sp,
               fontWeight = FontWeight.SemiBold
             )
           }
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
-        // Bottom Action Bar: Gallery Thumbnail, Shutter Button, Flip Camera
+        // Bottom Action Bar: Gallery Thumbnail, Shutter Button, Media Picker, Flip Camera
         Row(
           modifier = Modifier.fillMaxWidth(),
           horizontalArrangement = Arrangement.SpaceAround,
@@ -525,13 +683,13 @@ fun CameraScreen(
           val latestBitmap = remember(latestPhoto?.uri) {
             latestPhoto?.uri?.let { path ->
               val f = File(path)
-              if (f.exists()) BitmapFactory.decodeFile(f.absolutePath) else null
+              if (f.exists() && !path.endsWith(".mp4")) BitmapFactory.decodeFile(f.absolutePath) else null
             }
           }
 
           Box(
             modifier = Modifier
-              .size(52.dp)
+              .size(50.dp)
               .clip(CircleShape)
               .background(CozyCharcoalSurface)
               .border(1.5.dp, CozyBorder, CircleShape)
@@ -549,55 +707,111 @@ fun CameraScreen(
             } else {
               VintageCameraIllustration(
                 type = activePreset.cameraType,
-                size = 32.dp
+                size = 30.dp
               )
             }
           }
 
-          // Center: Large tactile vintage shutter button
+          // Shutter Button
           ShutterButton(
             isVideoMode = settings.isVideoMode,
             isRecording = isRecordingVideo,
             onClick = {
-              if (settings.isVideoMode) {
-                if (isRecordingVideo) {
-                  cameraController.stopRecording()
-                  isRecordingVideo = false
+              val executeShutter: () -> Unit = {
+                if (settings.isVideoMode) {
+                  if (isRecordingVideo) {
+                    cameraController.stopRecording()
+                    isRecordingVideo = false
+                  } else {
+                    val videoFile = File(context.cacheDir, "COZY_VID_${System.currentTimeMillis()}.mp4")
+                    isRecordingVideo = true
+                    cameraController.startRecording(
+                      outputFile = videoFile,
+                      enableAudio = settings.videoAudioEnabled,
+                      onVideoSaved = { savedFile ->
+                        isRecordingVideo = false
+                        onVideoRecorded(savedFile)
+                      },
+                      onError = { err ->
+                        isRecordingVideo = false
+                        onVideoRecorded(videoFile)
+                      }
+                    )
+                  }
                 } else {
-                  val videoFile = File(context.cacheDir, "COZY_VID_${System.currentTimeMillis()}.mp4")
-                  isRecordingVideo = true
-                  cameraController.startRecording(
-                    outputFile = videoFile,
-                    onVideoSaved = { savedFile ->
-                      isRecordingVideo = false
-                      onVideoRecorded(savedFile)
-                    },
-                    onError = { err ->
-                      isRecordingVideo = false
-                      err.printStackTrace()
+                  if (settings.flashMode == "on" || settings.isFrontCamera) {
+                    isScreenFlashActive = true
+                  }
+                  if (isCameraXActive && hasCameraPermission) {
+                    cameraController.takePicture(
+                      previewView = previewViewRef,
+                      onSuccess = { bmp ->
+                        isScreenFlashActive = false
+                        onShutterClick(bmp)
+                      },
+                      onError = {
+                        isScreenFlashActive = false
+                        onShutterClick(previewViewRef?.bitmap)
+                      }
+                    )
+                  } else {
+                    isScreenFlashActive = false
+                    onShutterClick(previewViewRef?.bitmap)
+                  }
+                }
+              }
+
+              if (settings.timerSeconds > 0 && !isRecordingVideo) {
+                if (activeTimerCountdown != null) {
+                  // Cancel countdown
+                  timerJob?.cancel()
+                  timerJob = null
+                  activeTimerCountdown = null
+                } else {
+                  timerJob = coroutineScope.launch {
+                    for (i in settings.timerSeconds downTo 1) {
+                      activeTimerCountdown = i
+                      kotlinx.coroutines.delay(1000)
                     }
-                  )
+                    activeTimerCountdown = null
+                    executeShutter()
+                  }
                 }
               } else {
-                if (isCameraXActive && hasCameraPermission) {
-                  cameraController.takePicture(
-                    onSuccess = { bmp -> onShutterClick(bmp) },
-                    onError = { onShutterClick(null) }
-                  )
-                } else {
-                  onShutterClick(null)
-                }
+                executeShutter()
               }
             }
           )
 
-          // Right: Flip Camera button
+          // Right: Photo Picker from Device
           Box(
             modifier = Modifier
-              .size(52.dp)
+              .size(46.dp)
               .clip(CircleShape)
               .background(CozyCharcoalSurface)
-              .border(1.5.dp, CozyBorder, CircleShape)
+              .border(1.2.dp, CozyBorder, CircleShape)
+              .clickable {
+                photoPickerLauncher.launch(
+                  PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                )
+              },
+            contentAlignment = Alignment.Center
+          ) {
+            Icon(
+              imageVector = Icons.Default.AddPhotoAlternate,
+              contentDescription = "Import Photo",
+              tint = CozyCream,
+              modifier = Modifier.size(22.dp)
+            )
+          }
+
+          // Far Right: Flip Camera button
+          Box(
+            modifier = Modifier
+              .size(46.dp)
+              .clip(CircleShape)
+              .background(CozyCharcoalSurface)
+              .border(1.2.dp, CozyBorder, CircleShape)
               .clickable(onClick = onToggleCameraFacing),
             contentAlignment = Alignment.Center
           ) {
@@ -605,16 +819,28 @@ fun CameraScreen(
               imageVector = Icons.Default.Cameraswitch,
               contentDescription = "Flip Camera",
               tint = CozyCream,
-              modifier = Modifier.size(24.dp)
+              modifier = Modifier.size(22.dp)
             )
           }
         }
       }
     }
 
-    // Shutter flash whiteout effect animation
+    // Video Settings Sheet Modal
+    if (showVideoSettingsSheet) {
+      VideoSettingsSheet(
+        settings = settings,
+        onUpdateQuality = onUpdateVideoQuality,
+        onUpdateFps = onUpdateVideoFps,
+        onToggleAudio = onToggleVideoAudio,
+        onSelectScene = onSelectSampleScene,
+        onDismiss = { showVideoSettingsSheet = false }
+      )
+    }
+
+    // Shutter flash whiteout / warm screen flash effect animation
     AnimatedVisibility(
-      visible = shutterFlashAnim,
+      visible = isScreenFlashActive || shutterFlashAnim,
       enter = fadeIn(),
       exit = fadeOut(),
       modifier = Modifier.fillMaxSize()
@@ -622,7 +848,7 @@ fun CameraScreen(
       Box(
         modifier = Modifier
           .fillMaxSize()
-          .background(Color.White)
+          .background(if (isScreenFlashActive) Color(0xFFFFF7E6) else Color.White)
       )
     }
   }

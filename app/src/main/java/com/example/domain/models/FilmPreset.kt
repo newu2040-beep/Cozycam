@@ -227,6 +227,172 @@ object FilmPresetRepository {
         vignette = 0.4f,
         dateStampEnabled = true
       )
+    ),
+    FilmPreset(
+      id = "super_8mm",
+      name = "Super 8",
+      category = "Video",
+      subtitle = "Warm • 1970s Motion",
+      description = "Golden sepia glow, warm tungsten tint, organic grain and nostalgic motion-film character.",
+      cameraType = CameraIllustrationType.VHS_CAMCORDER,
+      badgeColor = 0xFF8A5A2B,
+      defaultParams = FilmProcessingParams(
+        exposure = 0.08f,
+        contrast = 1.18f,
+        temperature = 0.42f,
+        tint = 0.15f,
+        saturation = 1.2f,
+        grain = 0.55f,
+        vignette = 0.45f,
+        halation = 0.35f,
+        lightLeak = 0.25f,
+        frameStyle = "film35mm",
+        dateStampEnabled = true
+      )
+    ),
+    FilmPreset(
+      id = "cinestill_800t",
+      name = "CineStill 800",
+      category = "Film",
+      subtitle = "Night Cine • Red Halation",
+      description = "Iconic tungsten-balanced film with glowing crimson halation bloom around night lights.",
+      cameraType = CameraIllustrationType.CINEMA_CAMERA,
+      badgeColor = 0xFFB33927,
+      defaultParams = FilmProcessingParams(
+        exposure = 0.05f,
+        contrast = 1.28f,
+        temperature = -0.2f,
+        tint = 0.12f,
+        saturation = 1.15f,
+        halation = 0.65f,
+        bloom = 0.35f,
+        grain = 0.4f,
+        vignette = 0.32f,
+        dateStampEnabled = true
+      )
+    ),
+    FilmPreset(
+      id = "ektachrome_100",
+      name = "Ektachrome",
+      category = "Film",
+      subtitle = "Vivid • Slide Color",
+      description = "Rich royal blues, saturated warm highlights, and punchy reversal film contrast.",
+      cameraType = CameraIllustrationType.FUJI_COMPACT,
+      badgeColor = 0xFF2A52BE,
+      defaultParams = FilmProcessingParams(
+        exposure = 0.05f,
+        contrast = 1.35f,
+        temperature = -0.05f,
+        tint = -0.08f,
+        saturation = 1.4f,
+        grain = 0.22f,
+        vignette = 0.25f,
+        sharpness = 0.35f,
+        dateStampEnabled = true
+      )
+    ),
+    FilmPreset(
+      id = "ilford_hp5",
+      name = "Ilford HP5",
+      category = "B&W",
+      subtitle = "Street • Gritty Silver",
+      description = "Classic high-contrast 400 ISO monochrome with velvety deep blacks and authentic silver gelatin grain.",
+      cameraType = CameraIllustrationType.MONO_SLR,
+      badgeColor = 0xFF2B2B2B,
+      defaultParams = FilmProcessingParams(
+        exposure = 0.0f,
+        contrast = 1.42f,
+        temperature = 0.0f,
+        tint = 0.0f,
+        saturation = 0.0f,
+        grain = 0.65f,
+        vignette = 0.4f,
+        sharpness = 0.25f,
+        dateStampEnabled = false
+      )
+    ),
+    FilmPreset(
+      id = "pastel_dream",
+      name = "Pastel Dream",
+      category = "Creative",
+      subtitle = "Mellow • Dreamy Blush",
+      description = "Milky lifted shadows, dreamy blooming highlights, and soft pastel peachy skin tones.",
+      cameraType = CameraIllustrationType.POLAROID_INSTANT,
+      badgeColor = 0xFFD89B9B,
+      defaultParams = FilmProcessingParams(
+        exposure = 0.15f,
+        contrast = 0.92f,
+        temperature = 0.22f,
+        tint = 0.18f,
+        saturation = 0.95f,
+        bloom = 0.45f,
+        shadowResponse = 0.45f,
+        grain = 0.25f,
+        vignette = 0.2f,
+        dateStampEnabled = true
+      )
+    ),
+    FilmPreset(
+      id = "polaroid_600",
+      name = "Polaroid 600",
+      category = "Instant",
+      subtitle = "High-Key • Instant Magic",
+      description = "Signature 80s instant camera aesthetic with lifted shadows, cyan skies, and white instant border.",
+      cameraType = CameraIllustrationType.POLAROID_INSTANT,
+      badgeColor = 0xFFE2DCB8,
+      defaultParams = FilmProcessingParams(
+        exposure = 0.18f,
+        contrast = 1.05f,
+        temperature = 0.15f,
+        tint = -0.1f,
+        saturation = 1.1f,
+        bloom = 0.35f,
+        grain = 0.35f,
+        vignette = 0.35f,
+        frameStyle = "polaroid",
+        dateStampEnabled = true
+      )
+    ),
+    FilmPreset(
+      id = "golden_amber",
+      name = "Golden Amber",
+      category = "Film",
+      subtitle = "Golden Hour • Radiant",
+      description = "Drenched in golden hour sunlight with radiant amber highlights, gentle light leaks, and warm honey hues.",
+      cameraType = CameraIllustrationType.KODAK_GOLD,
+      badgeColor = 0xFFD4881A,
+      defaultParams = FilmProcessingParams(
+        exposure = 0.12f,
+        contrast = 1.18f,
+        temperature = 0.65f,
+        tint = 0.15f,
+        saturation = 1.35f,
+        grain = 0.3f,
+        halation = 0.4f,
+        lightLeak = 0.4f,
+        vignette = 0.32f,
+        dateStampEnabled = true
+      )
+    ),
+    FilmPreset(
+      id = "cyberpunk_neo",
+      name = "Cyberpunk Neo",
+      category = "Creative",
+      subtitle = "Neon • Violet & Cyan",
+      description = "Futuristic retro anime film grade with deep electric violet shadows and glowing neon cyan highlights.",
+      cameraType = CameraIllustrationType.CINEMA_CAMERA,
+      badgeColor = 0xFF8A2BE2,
+      defaultParams = FilmProcessingParams(
+        exposure = 0.05f,
+        contrast = 1.35f,
+        temperature = -0.4f,
+        tint = 0.55f,
+        saturation = 1.38f,
+        chromaticAberration = 0.5f,
+        bloom = 0.4f,
+        vignette = 0.45f,
+        dateStampEnabled = true
+      )
     )
   )
 

@@ -1,8 +1,104 @@
 <?xml version="1.0" encoding="utf-8"?>
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item
-        android:width="70dp"
-        android:height="70dp"
-        android:drawable="@drawable/cozycam_circle_icon"
-        android:gravity="center" />
-</layer-list>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- 1. Outer Metallic Brass Lens Barrel Ring -->
+    <path
+        android:pathData="M54,23 A31,31 0 1,0 54,85 A31,31 0 1,0 54,23 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="23"
+                android:startY="23"
+                android:endX="85"
+                android:endY="85"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#F5CF85" />
+                <item android:offset="0.3" android:color="#D4A359" />
+                <item android:offset="0.7" android:color="#8E6527" />
+                <item android:offset="1.0" android:color="#E8BE72" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- 2. Dark Stepped Knurled Rim -->
+    <path
+        android:pathData="M54,26 A28,28 0 1,0 54,82 A28,28 0 1,0 54,26 Z"
+        android:fillColor="#1E1C1A" />
+
+    <!-- 3. Fine Golden Thread Ring -->
+    <path
+        android:pathData="M54,28 A26,26 0 1,0 54,80 A26,26 0 1,0 54,28 Z"
+        android:strokeWidth="1.2"
+        android:strokeColor="#D4A359" />
+
+    <!-- 4. Deep Multi-Coated Optical Glass Circle -->
+    <path
+        android:pathData="M54,31 A23,23 0 1,0 54,77 A23,23 0 1,0 54,31 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:centerX="48"
+                android:centerY="46"
+                android:gradientRadius="23"
+                android:type="radial">
+                <item android:offset="0.0" android:color="#1A2733" />
+                <item android:offset="0.5" android:color="#12171E" />
+                <item android:offset="1.0" android:color="#080B0F" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- 5. Aperture Diaphragm Blades Silhouette -->
+    <path
+        android:pathData="M54,38 L65,47 L60,62 L43,61 L40,46 Z"
+        android:fillColor="#0D1014" />
+    <path
+        android:pathData="M54,38 L65,47 L60,62 L43,61 L40,46 Z"
+        android:strokeWidth="1.0"
+        android:strokeColor="#252F3C" />
+
+    <!-- 6. Inner Amber/Copper Core Element -->
+    <path
+        android:pathData="M54,45 A9,9 0 1,0 54,63 A9,9 0 1,0 54,45 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:centerX="52"
+                android:centerY="52"
+                android:gradientRadius="9"
+                android:type="radial">
+                <item android:offset="0.0" android:color="#FFB300" />
+                <item android:offset="0.5" android:color="#E65100" />
+                <item android:offset="1.0" android:color="#210500" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- 7. Center Pupil Circle -->
+    <path
+        android:pathData="M54,50 A4,4 0 1,0 54,58 A4,4 0 1,0 54,50 Z"
+        android:fillColor="#0B0704" />
+
+    <!-- 8. Multi-Coating Cyan/Magenta Glass Arc Reflections -->
+    <path
+        android:pathData="M40,36 A19,19 0 0,1 68,36"
+        android:strokeWidth="2.5"
+        android:strokeColor="#7038BDF8"
+        android:strokeLineCap="round" />
+
+    <path
+        android:pathData="M38,40 A18,18 0 0,1 64,36"
+        android:strokeWidth="1.2"
+        android:strokeColor="#90C084FC"
+        android:strokeLineCap="round" />
+
+    <!-- 9. Crisp White Pin-Point Catchlight -->
+    <path
+        android:pathData="M49,47 A2,2 0 1,0 49,51 A2,2 0 1,0 49,47 Z"
+        android:fillColor="#FFFFFF" />
+    <path
+        android:pathData="M60,60 A1.2,1.2 0 1,0 60,62.4 A1.2,1.2 0 1,0 60,60 Z"
+        android:fillColor="#80FFFFFF" />
+</vector>

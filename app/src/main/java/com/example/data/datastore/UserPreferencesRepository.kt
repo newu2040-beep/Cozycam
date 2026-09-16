@@ -66,4 +66,20 @@ class UserPreferencesRepository(private val context: Context) {
   suspend fun setDateStampEnabled(enabled: Boolean) {
     context.dataStore.edit { it[KEY_DATE_STAMP] = enabled }
   }
+
+  suspend fun setFlashMode(mode: String) {
+    context.dataStore.edit { it[KEY_FLASH_MODE] = mode }
+  }
+
+  suspend fun setTimerSeconds(seconds: Int) {
+    context.dataStore.edit { it[KEY_TIMER_SECONDS] = seconds }
+  }
+
+  suspend fun setAspectRatio(ratio: String) {
+    context.dataStore.edit { it[KEY_ASPECT_RATIO] = ratio }
+  }
+
+  suspend fun setExportQuality(quality: String) {
+    context.dataStore.edit { it[KEY_EXPORT_QUALITY] = quality }
+  }
 }
