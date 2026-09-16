@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -82,9 +83,14 @@ fun PresetsScreen(
       .fillMaxSize()
       .background(CozyObsidian)
       .statusBarsPadding()
-      .navigationBarsPadding()
+      .navigationBarsPadding(),
+    contentAlignment = Alignment.TopCenter
   ) {
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(
+      modifier = Modifier
+        .fillMaxSize()
+        .widthIn(max = 720.dp)
+    ) {
       // Top Navigation Bar
       Row(
         modifier = Modifier
@@ -146,9 +152,9 @@ fun PresetsScreen(
 
       Spacer(modifier = Modifier.height(8.dp))
 
-      // 2-Column Preset Cards Grid
+      // Adaptive Preset Cards Grid
       LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
+        columns = GridCells.Adaptive(minSize = 150.dp),
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 28.dp, top = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(14.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),

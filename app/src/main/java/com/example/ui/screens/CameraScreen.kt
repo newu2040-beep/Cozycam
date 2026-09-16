@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -257,7 +258,9 @@ fun CameraScreen(
       .navigationBarsPadding()
   ) {
     Column(
-      modifier = Modifier.fillMaxSize(),
+      modifier = Modifier
+        .fillMaxSize()
+        .widthIn(max = 560.dp),
       verticalArrangement = Arrangement.SpaceBetween,
       horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -742,22 +745,13 @@ fun CameraScreen(
                   if (settings.flashMode == "on" || settings.isFrontCamera) {
                     isScreenFlashActive = true
                   }
-                  if (isCameraXActive && hasCameraPermission) {
-                    cameraController.takePicture(
-                      previewView = previewViewRef,
-                      onSuccess = { bmp ->
-                        isScreenFlashActive = false
-                        onShutterClick(bmp)
-                      },
-                      onError = {
-                        isScreenFlashActive = false
-                        onShutterClick(previewViewRef?.bitmap)
-                      }
-                    )
-                  } else {
-                    isScreenFlashActive = false
-                    onShutterClick(previewViewRef?.bitmap)
-                  }
+                  cameraController.takePicture(
+                    previewView = previewViewRef,
+                    onSuccess = { bmp ->
+                      isScreenFlashActive = false
+                      onShutterClick(bmp)
+                    }
+                  )
                 }
               }
 

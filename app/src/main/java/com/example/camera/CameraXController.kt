@@ -226,63 +226,62 @@ class CameraXController(
 
   fun takePicture(
     previewView: PreviewView? = currentPreviewView,
-    onSuccess: (Bitmap) -> Unit,
-    onError: (Exception) -> Unit
+    onSuccess: (Bitmap?) -> Unit,
+    onError: (Exception) -> Unit = {}
   ) {
+    var hasHandled = false
+    val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
+
+    fun safeDeliverResult(bmp: Bitmap?) {
+      if (hasHandled) return
+      hasHandled = true
+      mainHandler.removeCallbacksAndMessages(null)
+      val resultBitmap = if (bmp != null && !isBitmapBlank(bmp)) {
+        bmp
+      } else {
+        val pvBmp = previewView?.bitmap
+        if (pvBmp != null && !isBitmapBlank(pvBmp)) pvBmp else bmp
+      }
+      ContextCompat.getMainExecutor(context).execute {
+        onSuccess(resultBitmap)
+      }
+    }
+
+    // 450ms watchdog so photo capture is instantaneous even on slow virtual cameras
+    val timeoutWatchdog = Runnable {
+      safeDeliverResult(previewView?.bitmap)
+    }
+    mainHandler.postDelayed(timeoutWatchdog, 450)
+
     val capture = imageCapture
     if (capture == null || !isCameraAvailable) {
-      val pvBitmap = previewView?.bitmap
-      if (pvBitmap != null && !isBitmapBlank(pvBitmap)) {
-        onSuccess(pvBitmap)
-      } else {
-        onError(IllegalStateException("Camera capture not available"))
-      }
+      safeDeliverResult(previewView?.bitmap)
       return
     }
 
-    capture.takePicture(
-      cameraExecutor,
-      object : ImageCapture.OnImageCapturedCallback() {
-        override fun onCaptureSuccess(image: ImageProxy) {
-          try {
-            val bitmap = imageProxyToBitmap(image)
-            image.close()
-
-            val finalBitmap = if (isBitmapBlank(bitmap)) {
-              val fallback = previewView?.bitmap
-              if (fallback != null && !isBitmapBlank(fallback)) fallback else bitmap
-            } else {
-              bitmap
-            }
-
-            ContextCompat.getMainExecutor(context).execute {
-              onSuccess(finalBitmap)
-            }
-          } catch (e: Exception) {
-            image.close()
-            ContextCompat.getMainExecutor(context).execute {
-              val fallback = previewView?.bitmap
-              if (fallback != null && !isBitmapBlank(fallback)) {
-                onSuccess(fallback)
-              } else {
-                onError(e)
-              }
+    try {
+      capture.takePicture(
+        cameraExecutor,
+        object : ImageCapture.OnImageCapturedCallback() {
+          override fun onCaptureSuccess(image: ImageProxy) {
+            try {
+              val bitmap = imageProxyToBitmap(image)
+              image.close()
+              safeDeliverResult(bitmap)
+            } catch (e: Exception) {
+              image.close()
+              safeDeliverResult(previewView?.bitmap)
             }
           }
-        }
 
-        override fun onError(exception: ImageCaptureException) {
-          ContextCompat.getMainExecutor(context).execute {
-            val fallback = previewView?.bitmap
-            if (fallback != null && !isBitmapBlank(fallback)) {
-              onSuccess(fallback)
-            } else {
-              onError(exception)
-            }
+          override fun onError(exception: ImageCaptureException) {
+            safeDeliverResult(previewView?.bitmap)
           }
         }
-      }
-    )
+      )
+    } catch (e: Exception) {
+      safeDeliverResult(previewView?.bitmap)
+    }
   }
 
   private fun imageProxyToBitmap(image: ImageProxy): Bitmap {

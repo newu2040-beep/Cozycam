@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -101,10 +102,13 @@ fun EditorScreen(
       .fillMaxSize()
       .background(CozyObsidian)
       .statusBarsPadding()
-      .navigationBarsPadding()
+      .navigationBarsPadding(),
+    contentAlignment = Alignment.TopCenter
   ) {
     Column(
-      modifier = Modifier.fillMaxSize(),
+      modifier = Modifier
+        .fillMaxSize()
+        .widthIn(max = 600.dp),
       verticalArrangement = Arrangement.SpaceBetween
     ) {
       // 1. Top Navigation Bar

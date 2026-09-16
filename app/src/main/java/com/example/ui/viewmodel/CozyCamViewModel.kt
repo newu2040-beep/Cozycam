@@ -381,10 +381,10 @@ class CozyCamViewModel(application: Application) : AndroidViewModel(application)
         "Photo Auto-Saved",
         "Your vintage photo was automatically saved to Pictures/CozyCam"
       )
-      _saveMessage.value = "Auto-saved to Gallery"
+      _saveMessage.value = "Photo Saved to Gallery"
 
       _isProcessing.value = false
-      _currentScreen.value = AppScreen.EDITOR
+      // Stay on CAMERA screen so user can shoot continuous photos, exactly like native camera
     }
   }
 
